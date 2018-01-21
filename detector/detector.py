@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import os
 import six.moves.urllib as urllib
@@ -18,7 +19,8 @@ from imutils.video import FPS
 import imutils
 import cv2
 
-VIDEO_INPUT = '../videos/store.mov'
+VIDEO_INPUT = '../videos/new.mov'
+#VIDEO_INPUT = 0
 
 # # Model preparation 
 # Any model exported using the `export_inference_graph.py` tool can be loaded here simply by changing `PATH_TO_CKPT` to point to a new .pb file.  
@@ -74,6 +76,11 @@ category_index = label_map_util.create_category_index(categories)
 cap = cv2.VideoCapture(VIDEO_INPUT)
 fps = FPS().start()
 
+state = open('../state.txt', 'w+')
+with open('../records.txt', 'w+') as records:
+    records.seek(0)
+    records.write('')
+
 # Running the tensorflow session
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
@@ -82,6 +89,8 @@ with detection_graph.as_default():
             ret, image_np = cap.read()
             if not ret:
                 break
+
+            cv2.imwrite('test.jpg', image_np)
             # image_np = imutils.resize(image_np, width=200)
             # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
             image_np_expanded = np.expand_dims(image_np, axis=0)
@@ -109,7 +118,23 @@ with detection_graph.as_default():
             #      plt.figure(figsize=IMAGE_SIZE)
             #      plt.imshow(image_np)
 
-            print(coordinates)
+            # print(coordinates)
+            customers_count = len(coordinates)
+
+            now = datetime.datetime.now()
+
+            record = '%i  %s\n' % (customers_count, str(now))
+
+            with open('../records.txt', 'a+') as records:
+                records.write(record)
+
+            with open('../positions.txt', 'a+') as positions:
+                for coordinate in coordinates:
+                    numbers = [('%f' % number) for number in coordinate]
+                    positions.write('  '.join(numbers) + '\n')
+
+            state.seek(0)
+            state.write(record)
 
             cv2.imshow('image', cv2.resize(image_np, (1280, 960)))
             if cv2.waitKey(25) & 0xFF == ord('q'):
@@ -117,3 +142,4 @@ with detection_graph.as_default():
                 cap.release()
                 break
             fps.update()
+state.close()
